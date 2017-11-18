@@ -665,6 +665,15 @@ def config_master(arr, configfile, lineno):
     return 0
 
 
+def config_manage_master(arr, configfile, lineno):
+    # type: (List[str], str, int) -> int
+    '''parse keyword: manage_master'''
+
+    err, param.MANAGE_MASTER = _config_boolean('manage_master', arr[1],
+                                               configfile, lineno)
+    return err
+
+
 def config_slave(arr, configfile, lineno):
     # type: (List[str], str, int) -> int
     '''parse keyword: slave'''

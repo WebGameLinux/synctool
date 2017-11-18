@@ -81,6 +81,8 @@ DEFAULT_NODESET = set(['all'])      # type: Set[str]
 
 # the master's fqdn hostname
 MASTER = None               # type: str
+# manage the master node
+MANAGE_MASTER = False
 
 # set of slaves by nodename
 SLAVES = set()              # type: Set[str]

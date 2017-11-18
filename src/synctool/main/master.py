@@ -47,6 +47,7 @@ OPT_SKIP_RSYNC = False
 OPT_AGGREGATE = False
 OPT_CHECK_UPDATE = False
 OPT_DOWNLOAD = False
+OPT_UNMANAGE_MASTER = False
 
 PASS_ARGS = None        # type: List[str]
 MASTER_OPTS = None      # type: List[str]
@@ -127,6 +128,9 @@ def worker_synctool(addr):
 def run_local_synctool():
     # type: () -> None
     '''run synctool on the master node itself'''
+
+    if not param.MANAGE_MASTER:
+        return
 
     cmd_arr = shlex.split(param.SYNCTOOL_CMD) + PASS_ARGS
 
@@ -438,6 +442,7 @@ def usage():
       --color                 Use colored output (only for terse mode)
       --no-color              Do not color output
   -S, --skip-rsync            Do not sync the repository
+  -Z                          Do not manage master node (even if configured)
       --version               Show current version number
       --check-update          Check for availibility of newer version
       --download              Download latest version
@@ -457,8 +462,8 @@ def get_options():
     '''parse command-line options'''
 
     global PASS_ARGS, OPT_SKIP_RSYNC, OPT_AGGREGATE
-    global OPT_CHECK_UPDATE, OPT_DOWNLOAD, MASTER_OPTS
-    global UPLOAD_FILE
+    global OPT_CHECK_UPDATE, OPT_DOWNLOAD, OPT_UNMANAGE_MASTER
+    global MASTER_OPTS, UPLOAD_FILE
 
     # check for typo's on the command-line;
     # things like "-diff" will trigger "-f" => "--fix"
@@ -466,7 +471,7 @@ def get_options():
 
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-                                   'hc:vn:g:x:X:d:1:r:u:s:o:p:efN:FTqaS',
+                                   'hc:vn:g:x:X:d:1:r:u:s:o:p:efN:FTqaSZ',
                                    ['help', 'conf=', 'verbose', 'node=',
                                     'group=', 'exclude=', 'exclude-group=',
                                     'diff=', 'single=', 'ref=', 'upload=',
@@ -665,6 +670,10 @@ def get_options():
             OPT_SKIP_RSYNC = True
             continue
 
+        if opt == '-Z':
+            OPT_UNMANAGE_MASTER = True
+            continue
+
         if opt == '--check-update':
             OPT_CHECK_UPDATE = True
             continue
@@ -759,6 +768,16 @@ def main():
         verbose('master %s != hostname %s' % (param.MASTER, param.HOSTNAME))
         error('not running on the master node')
         sys.exit(-1)
+
+    if param.MANAGE_MASTER:
+        if not param.NODENAME:
+            error('unable to determine my nodename (hostname: %s)' %
+                  param.HOSTNAME)
+            stderr('please check %s' % param.CONF_FILE)
+            sys.exit(-1)
+
+        if OPT_UNMANAGE_MASTER:
+            param.MANAGE_MASTER = False
 
     if not _check_valid_overlaydirs():
         # error message already printed

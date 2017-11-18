@@ -16,6 +16,9 @@
 # the fqdn (fully qualified domain name) is given as argument
 master node0.mycluster.org
 
+# manage the master node itself with this synctool
+#manage_master no
+
 # slave nodes get a full copy of the synctool repository
 #slave node8 node9
 

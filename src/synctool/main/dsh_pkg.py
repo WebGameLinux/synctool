@@ -24,7 +24,7 @@ except ImportError:
 from synctool import config, param
 import synctool.aggr
 import synctool.lib
-from synctool.lib import verbose, error
+from synctool.lib import verbose, stderr, error
 import synctool.multiplex
 from synctool.main.wrapper import catch_signals
 import synctool.nodeset
@@ -68,6 +68,10 @@ def worker_pkg(addr):
 
     nodename = NODESET.get_nodename_from_address(addr)
 
+    if nodename == param.NODENAME:
+        run_local_pkg()
+        return
+
     # use ssh connection multiplexing (if possible)
     use_multiplex = synctool.multiplex.use_mux(nodename)
 
@@ -94,6 +98,19 @@ def worker_pkg(addr):
         # run_with_nodename() shows the nodename, but
         # does not expect any prompts while running the cmd
         synctool.lib.run_with_nodename(cmd_arr, nodename)
+
+
+def run_local_pkg():
+    '''run locally on master node'''
+
+    if not param.MANAGE_MASTER:
+        return
+
+    cmd_arr = shlex.split(param.PKG_CMD)
+    cmd_arr.extend(PASS_ARGS)
+
+    verbose('running synctool-pkg on node %s' % synctool.param.NODENAME)
+    synctool.lib.run_with_nodename(cmd_arr, synctool.param.NODENAME)
 
 
 def rearrange_options():
@@ -194,8 +211,10 @@ def usage():
   -C, --clean                    Cleanup caches of downloaded packages
   -N, --numproc=NUM              Set number of concurrent procs
   -z, --zzz=NUM                  Sleep NUM seconds between each run
+  -Z                             Do not manage master node (even if configured)
       --unix                     Output actions as unix shell commands
   -v, --verbose                  Be verbose
+  -q, --quiet                    Suppress informational messages
   -a, --aggregate                Condense output
   -f, --fix                      Perform upgrade (otherwise, do dry-run)
   -m, --manager PACKAGE_MANAGER  (Force) select this package manager
@@ -241,7 +260,7 @@ def get_options():
     arglist = rearrange_options()
 
     try:
-        opts, args = getopt.getopt(arglist, 'hc:n:g:x:X:iRluUCm:fN:z:vqa',
+        opts, args = getopt.getopt(arglist, 'hc:n:g:x:X:iRluUCm:fN:z:Zvqa',
                                    ['help', 'conf=', 'node=', 'group=',
                                     'exclude=', 'exclude-group=', 'list',
                                     'install', 'remove', 'update', 'upgrade',
@@ -385,6 +404,10 @@ def get_options():
 
             continue
 
+        if opt == '-Z':
+            param.MANAGE_MASTER = False
+            continue
+
         if opt in ('-q', '--quiet'):
             synctool.lib.QUIET = True
 
@@ -451,6 +474,12 @@ def main():
         verbose('master %s != hostname %s' % (param.MASTER,
                                               param.HOSTNAME))
         error('not running on the master node')
+        sys.exit(-1)
+
+    if param.MANAGE_MASTER and not param.NODENAME:
+        error('unable to determine my nodename (hostname: %s)' %
+              param.HOSTNAME)
+        stderr('please check %s' % param.CONF_FILE)
         sys.exit(-1)
 
     synctool.lib.openlog()

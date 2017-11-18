@@ -23,7 +23,7 @@ except ImportError:
 from synctool import config, param
 import synctool.aggr
 import synctool.lib
-from synctool.lib import verbose, error, unix_out
+from synctool.lib import verbose, stderr, error, unix_out
 from synctool.main.wrapper import catch_signals
 import synctool.nodeset
 import synctool.parallel
@@ -35,6 +35,7 @@ PROGNAME = 'dsh-ping'
 NODESET = synctool.nodeset.NodeSet()
 
 OPT_AGGREGATE = False
+OPT_UNMANAGE_MASTER = False
 
 MASTER_OPTS = []    # type: List[str]
 
@@ -51,6 +52,10 @@ def ping_node(addr):
     '''ping a single node'''
 
     node = NODESET.get_nodename_from_address(addr)
+    if node == param.NODENAME:
+        # don't care about the local node
+        return
+
     verbose('pinging %s' % node)
     unix_out('%s %s' % (param.PING_CMD, addr))
 
@@ -106,6 +111,13 @@ def ping_node(addr):
         print '%s: not responding' % node
 
 
+def run_local_ping():
+    '''run on local (master) node'''
+
+    # do not actually run; just say 'up'
+    print '%s: up' % synctool.param.NODENAME
+
+
 def check_cmd_config():
     # type: () -> None
     '''check whether the commands as given in synctool.conf actually exist'''
@@ -142,10 +154,10 @@ def get_options():
     # type: () -> None
     '''parse command-line options'''
 
-    global MASTER_OPTS, OPT_AGGREGATE
+    global MASTER_OPTS, OPT_AGGREGATE, OPT_UNMANAGE_MASTER
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hc:vn:g:x:X:aN:qp:z:',
+        opts, args = getopt.getopt(sys.argv[1:], 'hc:vn:g:x:X:aN:qp:z:Z',
                                    ['help', 'conf=', 'verbose', 'node=',
                                     'group=', 'exclude=', 'exclude-group=',
                                     'aggregate', 'unix', 'quiet', 'numproc=',
@@ -262,6 +274,10 @@ def get_options():
 
             continue
 
+        if opt == '-Z':
+            OPT_UNMANAGE_MASTER = True
+            continue
+
     if args:
         print '%s: too many arguments' % PROGNAME
         sys.exit(1)
@@ -290,6 +306,16 @@ def main():
         sys.exit(0)
 
     config.init_mynodename()
+
+    if param.MANAGE_MASTER:
+        if not param.NODENAME:
+            error('unable to determine my nodename (hostname: %s)' %
+                  param.HOSTNAME)
+            stderr('please check %s' % param.CONF_FILE)
+            sys.exit(-1)
+
+        if OPT_UNMANAGE_MASTER:
+            param.MANAGE_MASTER = False
 
     address_list = NODESET.addresses()
     if not address_list:

@@ -166,12 +166,15 @@ If you don't know what the fqdn is, you can get it by running the command:
 
     synctool-config --fqdn
 
-If you want to manage the master node itself with synctool, you should also
-define it as a node. It is a matter of taste, but it is maybe better _not_
-to do so. If you choose not to manage the master node, it may be omitted
-from the configuration. You may also explicitly exclude it:
+It is possible to manage the master node itself with synctool. Beware that
+doing so can be confusing in practice; the default is not to.
 
-    node n1 master           hostname:n1.mycluster.org
+    manage_master yes
+
+If you want to manage the master node itself with synctool, you must also
+define it as a node. Otherwise, it may be omitted or it may be ignored.
+
+    node n1 master           ipaddress:192.168.0.2
     ignore_node n1
 
 Beside a master node, you may also define slave nodes.

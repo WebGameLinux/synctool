@@ -24,7 +24,7 @@ from synctool import config, param
 import synctool.aggr
 import synctool.configparser
 import synctool.lib
-from synctool.lib import verbose, error
+from synctool.lib import verbose, stderr, error
 from synctool.main.wrapper import catch_signals
 import synctool.multiplex
 import synctool.nodeset
@@ -43,6 +43,7 @@ SSH_OPTIONS = None      # type: str
 OPT_MULTIPLEX = False
 CTL_CMD = None          # type: str
 PERSIST = None          # type: str
+OPT_UNMANAGE_MASTER = False
 
 # ugly globals help parallelism
 SSH_CMD_ARR = None      # type: List[str]
@@ -118,6 +119,10 @@ def worker_ssh(addr):
 
     nodename = NODESET.get_nodename_from_address(addr)
 
+    if nodename == param.NODENAME:
+        run_local_command()
+        return
+
     # use ssh connection multiplexing (if possible)
     use_multiplex = synctool.multiplex.use_mux(nodename)
 
@@ -172,6 +177,17 @@ def worker_ssh(addr):
         # run_with_nodename() shows the nodename, but
         # does not expect any prompts while running the cmd
         synctool.lib.run_with_nodename(ssh_cmd_arr, nodename)
+
+
+def run_local_command():
+    '''execute command on local (master) node'''
+
+    if not param.MANAGE_MASTER:
+        return
+
+    verbose('running %s on %s' % (' '.join(REMOTE_CMD_ARR),
+                                  synctool.param.NODENAME))
+    synctool.lib.run_with_nodename(REMOTE_CMD_ARR, synctool.param.NODENAME)
 
 
 def start_multiplex(address_list):
@@ -294,9 +310,11 @@ def usage():
   -O CTL_CMD                  Control ssh master processes
   -N, --numproc=NUM           Set number of concurrent procs
   -z, --zzz=NUM               Sleep NUM seconds between each run
+  -Z                          Do not manage master node (even if configured)
       --no-nodename           Do not prepend nodename to output
       --unix                  Output actions as unix shell commands
   -v, --verbose               Be verbose
+  -q, --quiet                 Suppress informational messages
   -a, --aggregate             Condense output; list nodes per change
       --skip-rsync            Do not sync commands from the scripts/ dir
                               (eg. when it is on a shared filesystem)
@@ -310,14 +328,14 @@ def get_options():
     '''parse command-line options'''
 
     global MASTER_OPTS, OPT_SKIP_RSYNC, OPT_AGGREGATE, SSH_OPTIONS
-    global OPT_MULTIPLEX, CTL_CMD, PERSIST
+    global OPT_MULTIPLEX, CTL_CMD, PERSIST, OPT_UNMANAGE_MASTER
 
     if len(sys.argv) <= 1:
         usage()
         sys.exit(1)
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hc:n:g:x:X:o:MP:O:N:z:vqa',
+        opts, args = getopt.getopt(sys.argv[1:], 'hc:n:g:x:X:o:MP:O:N:z:Zvqa',
                                    ['help', 'conf=', 'node=', 'group=',
                                     'exclude=', 'exclude-group=', 'aggregate',
                                     'options=', 'master', 'multiplex',
@@ -444,6 +462,10 @@ def get_options():
 
             continue
 
+        if opt == '-Z':
+            OPT_UNMANAGE_MASTER = True
+            continue
+
         if opt in ('-a', '--aggregate'):
             OPT_AGGREGATE = True
             continue
@@ -514,6 +536,16 @@ def main():
         sys.exit(0)
 
     config.init_mynodename()
+
+    if param.MANAGE_MASTER:
+        if not param.NODENAME:
+            error('unable to determine my nodename (hostname: %s)' %
+                  param.HOSTNAME)
+            stderr('please check %s' % param.CONF_FILE)
+            sys.exit(-1)
+
+        if OPT_UNMANAGE_MASTER:
+            param.MANAGE_MASTER = False
 
     address_list = NODESET.addresses()
     if not address_list:

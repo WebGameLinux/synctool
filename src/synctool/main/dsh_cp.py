@@ -23,7 +23,7 @@ except ImportError:
 from synctool import config, param
 import synctool.aggr
 import synctool.lib
-from synctool.lib import stdout, error, unix_out
+from synctool.lib import stdout, stderr, error, unix_out
 import synctool.multiplex
 from synctool.main.wrapper import catch_signals
 import synctool.nodeset
@@ -40,6 +40,7 @@ OPT_AGGREGATE = False
 MASTER_OPTS = None      # type: List[str]
 DSH_CP_OPTIONS = None   # type: str
 OPT_PURGE = False
+OPT_UNMANAGE_MASTER = False
 
 # ugly globals help parallelism
 DSH_CP_CMD_ARR = None   # type: List[str]
@@ -181,7 +182,8 @@ def get_options():
     # type: () -> List[str]
     '''parse command-line options'''
 
-    global DESTDIR, MASTER_OPTS, OPT_AGGREGATE, DSH_CP_OPTIONS, OPT_PURGE
+    global DESTDIR, MASTER_OPTS, OPT_AGGREGATE, DSH_CP_OPTIONS
+    global OPT_PURGE, OPT_UNMANAGE_MASTER
 
     if len(sys.argv) <= 1:
         usage()
@@ -191,7 +193,7 @@ def get_options():
     DSH_CP_OPTIONS = None
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'hc:n:g:x:X:o:pN:z:vqaf',
+        opts, args = getopt.getopt(sys.argv[1:], 'hc:n:g:x:X:o:pN:z:Zvqaf',
                                    ['help', 'conf=', 'node=', 'group=',
                                     'exclude=', 'exclude-group=', 'options=',
                                     'purge', 'no-nodename', 'numproc=',
@@ -305,6 +307,10 @@ def get_options():
 
             continue
 
+        if opt == '-Z':
+            OPT_UNMANAGE_MASTER = True
+            continue
+
         if opt == '--unix':
             synctool.lib.UNIX_CMD = True
             continue
@@ -380,6 +386,16 @@ def main():
         sys.exit(0)
 
     config.init_mynodename()
+
+    if param.MANAGE_MASTER:
+        if not param.NODENAME:
+            error('unable to determine my nodename (hostname: %s)' %
+                  param.HOSTNAME)
+            stderr('please check %s' % param.CONF_FILE)
+            sys.exit(-1)
+
+        if OPT_UNMANAGE_MASTER:
+            param.MANAGE_MASTER = False
 
     address_list = NODESET.addresses()
     if not address_list:
