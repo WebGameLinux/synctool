@@ -21,10 +21,8 @@ try:
 except ImportError:
     pass
 
-import synctool.configparser
-import synctool.lib
+from synctool import configparser, param, lib
 from synctool.lib import stderr, error
-import synctool.param
 
 
 def read_config():
@@ -33,77 +31,76 @@ def read_config():
     Return value: none, exit the program on error
     '''
 
-    if not os.path.isfile(synctool.param.CONF_FILE):
-        stderr("no such config file '%s'" % synctool.param.CONF_FILE)
+    if not os.path.isfile(param.CONF_FILE):
+        stderr("no such config file '%s'" % param.CONF_FILE)
         sys.exit(-1)
 
-    errors = synctool.configparser.read_config_file(synctool.param.CONF_FILE)
+    errors = configparser.read_config_file(param.CONF_FILE)
 
     # overlay/ and delete/ must be under ROOTDIR
-    if not os.path.isdir(synctool.param.OVERLAY_DIR):
-        error('no such directory: %s' % synctool.param.OVERLAY_DIR)
+    if not os.path.isdir(param.OVERLAY_DIR):
+        error('no such directory: %s' % param.OVERLAY_DIR)
         errors += 1
 
-    if not os.path.isdir(synctool.param.DELETE_DIR):
-        error('no such directory: %s' % synctool.param.DELETE_DIR)
+    if not os.path.isdir(param.DELETE_DIR):
+        error('no such directory: %s' % param.DELETE_DIR)
         errors += 1
 
-    if not os.path.isdir(synctool.param.PURGE_DIR):
-        error('no such directory: %s' % synctool.param.PURGE_DIR)
+    if not os.path.isdir(param.PURGE_DIR):
+        error('no such directory: %s' % param.PURGE_DIR)
         errors += 1
 
-    if not synctool.param.TEMP_DIR:
-        synctool.param.TEMP_DIR = '/tmp/synctool'
+    if not param.TEMP_DIR:
+        param.TEMP_DIR = '/tmp/synctool'
         # do not make temp dir here; it is only used on the master node
 
     # if commands not set, select sensible defaults
     # the existence of the commands is checked later ...
-    if not synctool.param.SYNCTOOL_CMD:
-        synctool.param.SYNCTOOL_CMD = os.path.join(synctool.param.ROOTDIR,
-                                                   'bin', 'synctool-client')
+    if not param.SYNCTOOL_CMD:
+        param.SYNCTOOL_CMD = os.path.join(param.ROOTDIR, 'bin',
+                                          'synctool-client')
 
-    if not synctool.param.PKG_CMD:
-        synctool.param.PKG_CMD = os.path.join(synctool.param.ROOTDIR,
-                                              'bin', 'synctool-client-pkg')
+    if not param.PKG_CMD:
+        param.PKG_CMD = os.path.join(param.ROOTDIR, 'bin',
+                                     'synctool-client-pkg')
 
     # check master node
-    if not synctool.param.MASTER:
+    if not param.MASTER:
         error("'master' is not configured")
         errors += 1
 
-    if synctool.param.MANAGE_MASTER and not synctool.param.MASTER_NODENAME:
+    if param.MANAGE_MASTER and not param.MASTER_NODENAME:
         error("'master' requires a nodename when 'manage_master' is set")
         errors += 1
 
-    if (synctool.param.MASTER_NODENAME and
-            (synctool.param.MASTER_NODENAME not in synctool.param.NODES)):
+    if param.MASTER_NODENAME and (param.MASTER_NODENAME not in param.NODES):
         error("'master' node is '%s', but no such node defined" %
-              synctool.param.MASTER_NODENAME)
+              param.MASTER_NODENAME)
         errors += 1
 
-    for node in synctool.param.SLAVES:
-        if node not in synctool.param.NODES:
+    for node in param.SLAVES:
+        if node not in param.NODES:
             error("slave '%s': no such node" % node)
             errors += 1
 
     # implicitly add group 'all'
-    if 'all' not in synctool.param.GROUP_DEFS:
-        synctool.param.GROUP_DEFS['all'] = None
+    if 'all' not in param.GROUP_DEFS:
+        param.GROUP_DEFS['all'] = None
 
     # implicitly add 'nodename' as first group
     # implicitly add 'all' as last group
-    for node in synctool.param.NODES:
+    for node in param.NODES:
         insert_group(node, node)
-        synctool.param.NODES[node].append('all')
+        param.NODES[node].append('all')
 
     # implicitly add group 'none'
-    if 'none' not in synctool.param.GROUP_DEFS:
-        synctool.param.GROUP_DEFS['none'] = None
+    if 'none' not in param.GROUP_DEFS:
+        param.GROUP_DEFS['none'] = None
 
-    synctool.param.IGNORE_GROUPS.add('none')
+    param.IGNORE_GROUPS.add('none')
 
     # initialize ALL_GROUPS
-    synctool.param.ALL_GROUPS = make_all_groups()
+    param.ALL_GROUPS = make_all_groups()
 
     if errors > 0:
         sys.exit(-1)
@@ -117,15 +114,15 @@ def check_cmd_config(param_name, cmd):
     '''
 
     if not cmd:
-        stderr("%s: error: parameter '%s' is missing" %
-               (synctool.param.CONF_FILE, param_name))
+        stderr("%s: error: parameter '%s' is missing" % (param.CONF_FILE,
+                                                         param_name))
         return (False, None)
 
     arr = cmd.split()
-    path = synctool.lib.search_path(arr[0])
+    path = lib.search_path(arr[0])
     if not path:
-        stderr("%s: error: %s '%s' not found in PATH" %
-               (synctool.param.CONF_FILE, param_name, arr[0]))
+        stderr("%s: error: %s '%s' not found in PATH" % (param.CONF_FILE,
+                                                         param_name, arr[0]))
         return (False, None)
 
     # reassemble command with full path
@@ -150,13 +147,13 @@ def init_mynodename():
     # synctool makes no further assumptions about the nodename
 
     # get my hostname
-    synctool.param.HOSTNAME = hostname = socket.getfqdn()
+    param.HOSTNAME = hostname = socket.getfqdn()
 
-    if hostname == synctool.param.MASTER and synctool.param.MASTER_NODENAME:
+    if hostname == param.MASTER and param.MASTER_NODENAME:
         # running on the master node
-        synctool.param.NODENAME = synctool.param.MASTER_NODENAME
+        param.NODENAME = param.MASTER_NODENAME
 
-    if synctool.param.NODENAME is None:
+    if param.NODENAME is None:
         # try to find out who am I
         nodename = None
         found = False
@@ -166,8 +163,8 @@ def init_mynodename():
         if ipaddresses is not None:
             # try find a node that lists any of our IP addresses
             for node in all_nodes:
-                if node in synctool.param.IPADDRESSES:
-                    addr = synctool.param.IPADDRESSES[node]
+                if node in param.IPADDRESSES:
+                    addr = param.IPADDRESSES[node]
                 else:
                     # unknown (explicit) IP address for node
                     continue
@@ -186,14 +183,14 @@ def init_mynodename():
                     break
 
         if found:
-            synctool.param.NODENAME = nodename
+            param.NODENAME = nodename
 
     # At this point, nodename can still be None
     # It only really matters for client.py, which checks this condition
     # Note that synctool-client does _not_ use the short hostname to
     # identify the node it is running on
 
-    synctool.param.MY_GROUPS = get_my_groups()
+    param.MY_GROUPS = get_my_groups()
 
 
 def get_ipaddresses(name):
@@ -227,29 +224,29 @@ def insert_group(node, group):
     # type: (str, str) -> None
     '''add group to node definition'''
 
-    if node in synctool.param.NODES:
-        if group in synctool.param.NODES[node]:
+    if node in param.NODES:
+        if group in param.NODES[node]:
             # remove the group and reinsert it to make sure it comes first
-            synctool.param.NODES[node].remove(group)
+            param.NODES[node].remove(group)
 
-        synctool.param.NODES[node].insert(0, group)
+        param.NODES[node].insert(0, group)
     else:
-        synctool.param.NODES[node] = [group]
+        param.NODES[node] = [group]
 
 
 def get_all_nodes():
     # type: () -> List[str]
     '''Returns array with all node names'''
 
-    return synctool.param.NODES.keys()
+    return param.NODES.keys()
 
 
 def get_node_ipaddress(node):
     # type: (str) -> str
     '''Return IPaddress of node, or node name if unknown'''
 
-    if node in synctool.param.IPADDRESSES:
-        return synctool.param.IPADDRESSES[node]
+    if node in param.IPADDRESSES:
+        return param.IPADDRESSES[node]
 
     return node
 
@@ -260,8 +257,8 @@ def make_all_groups():
     This is a set of all group names plus all node names
     '''
 
-    s = set(synctool.param.GROUP_DEFS.keys())
-    s |= set(synctool.param.NODES.keys())
+    s = set(param.GROUP_DEFS.keys())
+    s |= set(param.NODES.keys())
     return s
 
 
@@ -269,8 +266,8 @@ def get_groups(nodename):
     # type: (str) -> List[str]
     '''returns the groups for the node'''
 
-    if nodename in synctool.param.NODES:
-        return synctool.param.NODES[nodename]
+    if nodename in param.NODES:
+        return param.NODES[nodename]
 
     return []
 
@@ -279,8 +276,8 @@ def get_my_groups():
     # type: () -> List[str]
     '''returns the groups for this node'''
 
-    if synctool.param.NODENAME in synctool.param.NODES:
-        return synctool.param.NODES[synctool.param.NODENAME]
+    if param.NODENAME in param.NODES:
+        return param.NODES[param.NODENAME]
 
     return []
 
@@ -292,10 +289,10 @@ def get_nodes_in_groups(groups):
     s = set()   # type: Set[str]
 
     for g in groups:
-        for node in synctool.param.NODES:
+        for node in param.NODES:
             # NODES[node] is an ordered list (groups in order of importance)
             # so we can not do neat tricks with combining sets here ...
-            if g in synctool.param.NODES[node]:
+            if g in param.NODES[node]:
                 s.add(node)
 
     return s
