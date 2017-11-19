@@ -397,6 +397,10 @@ def main():
         if OPT_UNMANAGE_MASTER:
             param.MANAGE_MASTER = False
 
+    if param.MASTER_NODENAME and not param.MANAGE_MASTER:
+        # explicitly exclude the master node just to be sure
+        NODESET.exclude_node(param.MASTER_NODENAME)
+
     address_list = NODESET.addresses()
     if not address_list:
         error('no valid nodes specified')

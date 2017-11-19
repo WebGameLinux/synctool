@@ -129,9 +129,6 @@ def run_local_synctool():
     # type: () -> None
     '''run synctool on the master node itself'''
 
-    if not param.MANAGE_MASTER:
-        return
-
     cmd_arr = shlex.split(param.SYNCTOOL_CMD) + PASS_ARGS
 
     verbose('running synctool on node %s' % param.NODENAME)
@@ -778,6 +775,10 @@ def main():
 
         if OPT_UNMANAGE_MASTER:
             param.MANAGE_MASTER = False
+
+    if param.MASTER_NODENAME and not param.MANAGE_MASTER:
+        # explicitly exclude the master node just to be sure
+        NODESET.exclude_node(param.MASTER_NODENAME)
 
     if not _check_valid_overlaydirs():
         # error message already printed

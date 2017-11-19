@@ -81,6 +81,7 @@ DEFAULT_NODESET = set(['all'])      # type: Set[str]
 
 # the master's fqdn hostname
 MASTER = None               # type: str
+MASTER_NODENAME = None      # type: str
 # manage the master node
 MANAGE_MASTER = False
 

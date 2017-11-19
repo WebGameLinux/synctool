@@ -71,6 +71,16 @@ def read_config():
         error("'master' is not configured")
         errors += 1
 
+    if synctool.param.MANAGE_MASTER and not synctool.param.MASTER_NODENAME:
+        error("'master' requires a nodename when 'manage_master' is set")
+        errors += 1
+
+    if (synctool.param.MASTER_NODENAME and
+            (synctool.param.MASTER_NODENAME not in synctool.param.NODES)):
+        error("'master' node is '%s', but no such node defined" %
+              synctool.param.MASTER_NODENAME)
+        errors += 1
+
     for node in synctool.param.SLAVES:
         if node not in synctool.param.NODES:
             error("slave '%s': no such node" % node)
@@ -82,7 +92,7 @@ def read_config():
 
     # implicitly add 'nodename' as first group
     # implicitly add 'all' as last group
-    for node in get_all_nodes():
+    for node in synctool.param.NODES:
         insert_group(node, node)
         synctool.param.NODES[node].append('all')
 
@@ -141,6 +151,10 @@ def init_mynodename():
 
     # get my hostname
     synctool.param.HOSTNAME = hostname = socket.getfqdn()
+
+    if hostname == synctool.param.MASTER and synctool.param.MASTER_NODENAME:
+        # running on the master node
+        synctool.param.NODENAME = synctool.param.MASTER_NODENAME
 
     if synctool.param.NODENAME is None:
         # try to find out who am I

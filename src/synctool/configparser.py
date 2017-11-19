@@ -656,12 +656,26 @@ def config_master(arr, configfile, lineno):
     # type: (List[str], str, int) -> int
     '''parse keyword: master'''
 
-    if len(arr) != 2:
-        stderr("%s:%d: 'master' requires one argument: the hostname" %
+    if param.MASTER is not None:
+        stderr("%s:%d: redefinition of 'master'" % (configfile, lineno))
+        return 1
+
+    if len(arr) < 2:
+        stderr("%s:%d: 'master' requires one argument: the fqdn hostname" %
                (configfile, lineno))
         return 1
 
     param.MASTER = arr[1]
+
+    # optional parameter: the nodename
+    if len(arr) == 3:
+        param.MASTER_NODENAME = arr[2]
+
+    if len(arr) > 3:
+        stderr("%s:%d: 'master' definition: too many arguments" %
+               (configfile, lineno))
+        return 1
+
     return 0
 
 

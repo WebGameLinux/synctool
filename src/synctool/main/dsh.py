@@ -182,9 +182,6 @@ def worker_ssh(addr):
 def run_local_command():
     '''execute command on local (master) node'''
 
-    if not param.MANAGE_MASTER:
-        return
-
     verbose('running %s on %s' % (' '.join(REMOTE_CMD_ARR),
                                   synctool.param.NODENAME))
     synctool.lib.run_with_nodename(REMOTE_CMD_ARR, synctool.param.NODENAME)
@@ -537,6 +534,9 @@ def main():
 
     config.init_mynodename()
 
+    # Note: it's possible to run dsh from a client node
+    # (if ssh access is allowed)
+
     if param.MANAGE_MASTER:
         if not param.NODENAME:
             error('unable to determine my nodename (hostname: %s)' %
@@ -546,6 +546,10 @@ def main():
 
         if OPT_UNMANAGE_MASTER:
             param.MANAGE_MASTER = False
+
+    if param.MASTER_NODENAME and not param.MANAGE_MASTER:
+        # explicitly exclude the master node just to be sure
+        NODESET.exclude_node(param.MASTER_NODENAME)
 
     address_list = NODESET.addresses()
     if not address_list:

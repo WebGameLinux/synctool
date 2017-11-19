@@ -37,6 +37,7 @@ PROGNAME = 'dsh-pkg'
 NODESET = synctool.nodeset.NodeSet()
 
 OPT_AGGREGATE = False
+OPT_UNMANAGE_MASTER = False
 
 PASS_ARGS = None        # type: List[str]
 MASTER_OPTS = None      # type: List[str]
@@ -102,9 +103,6 @@ def worker_pkg(addr):
 
 def run_local_pkg():
     '''run locally on master node'''
-
-    if not param.MANAGE_MASTER:
-        return
 
     cmd_arr = shlex.split(param.PKG_CMD)
     cmd_arr.extend(PASS_ARGS)
@@ -245,7 +243,7 @@ def get_options():
     # type: () -> None
     '''parse command-line options'''
 
-    global MASTER_OPTS, PASS_ARGS, OPT_AGGREGATE
+    global MASTER_OPTS, PASS_ARGS, OPT_AGGREGATE, OPT_UNMANAGE_MASTER
 
     if len(sys.argv) <= 1:
         usage()
@@ -405,7 +403,7 @@ def get_options():
             continue
 
         if opt == '-Z':
-            param.MANAGE_MASTER = False
+            OPT_UNMANAGE_MASTER = True
             continue
 
         if opt in ('-q', '--quiet'):
@@ -476,11 +474,19 @@ def main():
         error('not running on the master node')
         sys.exit(-1)
 
-    if param.MANAGE_MASTER and not param.NODENAME:
-        error('unable to determine my nodename (hostname: %s)' %
-              param.HOSTNAME)
-        stderr('please check %s' % param.CONF_FILE)
-        sys.exit(-1)
+    if param.MANAGE_MASTER:
+        if not param.NODENAME:
+            error('unable to determine my nodename (hostname: %s)' %
+                  param.HOSTNAME)
+            stderr('please check %s' % param.CONF_FILE)
+            sys.exit(-1)
+
+        if OPT_UNMANAGE_MASTER:
+            param.MANAGE_MASTER = False
+
+    if param.MASTER_NODENAME and not param.MANAGE_MASTER:
+        # explicitly exclude the master node just to be sure
+        NODESET.exclude_node(param.MASTER_NODENAME)
 
     synctool.lib.openlog()
 
