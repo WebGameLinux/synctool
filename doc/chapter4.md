@@ -248,13 +248,20 @@ synctool's configuration file.
 
         default_nodeset test1 test2 testnodes xtest[1-10]
 
-* `master <fqdn>`
+* `master <fqdn> [<nodename>]`
 
   Indicates which node is the master, the management node from where you
   will run synctool to control the cluster. It should be set to the fully
   qualified domain name of the management host. You can get the fqdn with:
 
         synctool-config --fqdn
+
+  The optional nodename is only required if you wish to manage the master
+  node with synctool as well.
+
+* `manage_master <yes/no>`
+
+  Manage your master node with synctool. The default is `no`.
 
 * `slave <nodename> [..]`
 

@@ -110,7 +110,7 @@ what nodes have what roles, and how synctool can contact them.
 Think a bit about what role each machine has. There is no need to go into
 great depth right now; you can always adjust the configuration later.
 
-    node n1  group1 group2  ipaddress:machine-n01
+    node n01  group1 group2  ipaddress:machine-n01
 
 The nodename is the 'synctool name that the node has.' It is in general the
 short hostname of the host, but in fact it can be anything you like.
@@ -160,7 +160,7 @@ Next, you have to tell synctool which node is the master management node.
 This is done by setting `master` to the fqdn (fully qualified domain name)
 of the management host.
 
-    master n1.mycluster.org
+    master n01.mycluster.org
 
 If you don't know what the fqdn is, you can get it by running the command:
 
@@ -169,13 +169,16 @@ If you don't know what the fqdn is, you can get it by running the command:
 It is possible to manage the master node itself with synctool. Beware that
 doing so can be confusing in practice; the default is not to.
 
-    manage_master yes
-
 If you want to manage the master node itself with synctool, you must also
 define it as a node. Otherwise, it may be omitted or it may be ignored.
 
-    node n1 master           ipaddress:192.168.0.2
-    ignore_node n1
+    master n01.mycluster.org n01
+    manage_master yes
+
+    node n01 group1 group2        ipaddress:192.168.0.2
+
+    # ok I changed my mind
+    ignore_node n01
 
 Beside a master node, you may also define slave nodes.
 Slaves are cold standby's that get full copies of the synctool repository.

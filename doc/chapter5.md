@@ -77,8 +77,10 @@ directories, because it makes things complicated.
 5.4 Do not manage the master node
 ---------------------------------
 It is recommended that you do not manage the master node with synctool.
-The reason is that it makes things more complicated when you choose to put
-the configuration of your master node under control of synctool.
+Although synctool does support it, it is still considered _non_ best
+practice. The reason is that it makes things more complicated when
+you choose to put the configuration of your master node under control
+of synctool.
 
 Why is this? It is mainly because synctool by default works on 'all' nodes,
 and for some reason it is unnatural when 'all' includes the master node too.
@@ -97,8 +99,9 @@ It's also OK to leave the master node out of the configuration altogether.
 (Here, 'master' is a group, not to be confused with the `master` keyword that
 defines the master node. Are you still with me?)
 
-If you still want to manage the master with synctool, do as you must. Just be
-sure to call `dsh -X master reboot` when you want to reboot your cluster.
+If you still want to manage the master with synctool, do as you must.
+A shortcut for skipping the master node during synctool or `dsh` runs
+is the option `-Z`.
 
 
 5.5 Managing multiple clusters with one synctool

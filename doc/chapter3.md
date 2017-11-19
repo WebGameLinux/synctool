@@ -302,6 +302,11 @@ if you just ran synctool to examine any changes. In general, this option is
 unnecessary, but it may be efficient if you are working with slow network
 links or a large synctool repository.
 
+The option `-Z` skips the master node if you have a setup with
+`manage_master` enabled. This is particularly handy for commands like
+
+    dsh -Z reboot
+
 
 3.4 Templates
 -------------
